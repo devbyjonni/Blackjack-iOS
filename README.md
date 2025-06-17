@@ -14,12 +14,23 @@ You’re starting fresh to build a clean, modular Blackjack app using SwiftUI on
 	•	Directory structure:
 
 Blackjack-iOS/
+├── App/
+│   ├── Assets/
+│   └── Blackjack_iOSApp.swift      ← @main entry point
+├── Assets/                         ← Game assets (cards, UI graphics)
+├── DevMenu/                        ← Dev tools & control panel
+│   ├── AnimationSpeed.swift
+│   ├── DevMenu.swift
+│   └── SegmentedControlView.swift
 ├── Models/
-├── Views/
+│   └── Card.swift                  ← Good start to data layer
 ├── ViewModels/
-├── DevTools/   ← Dev Menu + Mock Data
-├── Assets/
-└── BlackjackApp.swift
+├── Views/
+│   ├── Buttons/
+│   └── GameView.swift              ← Likely the main game board view
+├── Tests/
+│   ├── Blackjack_iOSTests/
+│   └── Blackjack_iOSUITests/
 
 
 
