@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "Nine_Clubs.png",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
