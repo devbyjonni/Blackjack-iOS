@@ -1,0 +1,41 @@
+# Xcode
+DerivedData/
+*.xcworkspace
+*.xcuserstate
+*.xcuserdata/
+
+# SwiftPM
+.build/
+
+# CocoaPods
+Pods/
+Podfile.lock
+
+# Carthage
+Carthage/Build/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# Build artifacts
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Logs
+*.log
+
+# User-specific
+.idea/
+*.swp
+*.lock
+*.xcuserstate
+
+# Swift Package Manager
+Package.resolved
+
+# Environment
+.env
