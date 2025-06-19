@@ -1,37 +1,51 @@
-//
-//  GameView.swift
-//  Blackjack-iOS
-//
-//  Created by Jonni Akesson on 2025-06-17.
-//
-
 import SwiftUI
 
 struct GameView: View {
-    @State private var showDevMenu = false
+    @State private var gameViewManager = GameViewManager()
     @State private var animationSpeed: AnimationSpeed = .medium
-    @State private var cards: [Card] = []
+    @State private var showDevMenu = false
     @State private var isGameOver = false
-    @State private var currentIndex = 0
     @State private var isDealing = false
-
-    private let cardWidth: CGFloat = 100
-
+    @State private var currentIndex = 0
+    
+    // Decks
     @State private var currentDeck: [Card] = []
-
+    @State private var playerCards: [Card] = []
+    @State private var dealerCards: [Card] = []
+    
+    @State private var isPlayerTurn: Bool = false
+    
+    // Scores
+    @State var dealerScore = 0
+    @State var playerScore = 0
+    
     var body: some View {
         ZStack {
             VStack {
-                Spacer()
+                FanCardsView(gameViewManager: gameViewManager, cards: dealerCards, isDealerCard: true, isGameOver: false, dealerScore: dealerScore, playerScore: playerScore)
+                    .opacity(isPlayerTurn ? 0.5 : 0.5)
+                
                 Text("Logo View Goes Here")
-                    .frame(height: 50)
+                
+                FanCardsView(gameViewManager: gameViewManager, cards: playerCards, isDealerCard: false, isGameOver: false, dealerScore: dealerScore, playerScore: playerScore)
+                    .opacity(isPlayerTurn ? 0.5 : 0.5)
+                
                 Spacer()
-
-                // Dealer and Player Cards view goes here.
-
-                Spacer()
-                GameButton(title: "Deal") {
-                    // Deal
+                if isPlayerTurn {
+                    HStack {
+                        GameButton(title: "STAND") {
+                            // Dev
+                        }
+                        GameButton(title: "HIT") {
+                            // Dev
+                            addPlayerCard()
+                        }
+                    }
+                } else {
+                    GameButton(title: "Deal") {
+                        // Dev
+                        handleDevScenario(DevScenario.initialDeal)
+                    }
                 }
             }
             .padding()
@@ -43,63 +57,92 @@ struct GameView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .devSelectedScenario)) { notification in
             if let scenario = notification.object as? DevScenario {
+                resetGame()
                 handleDevScenario(scenario)
             } else {
                 print("⚠️ Unknown Dev Scenario received.")
             }
         }
     }
+    
+    private func resetGame() {
+        currentDeck = []
+        playerCards = []
+        dealerCards = []
+        dealerScore = 0
+        playerScore = 0
+        currentIndex = 0
+        isDealing = false
+        isPlayerTurn = false
+    }
 }
 
+extension GameView {
+    private func dealOpeningCards() {
+        guard !isDealing else { return }
+        isDealing = true
+        
+        print("🃏 Dealing initial cards...")
+        
+        let delayUnit = animationSpeed.delay
+        
+        func addCard(_ card: Card, after delay: TimeInterval) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                withAnimation {
+                    if currentIndex % 2 == 0 {
+                        playerCards.append(card)
+                        playerScore += card.value
+                    } else {
+                        dealerCards.append(card)
+                        dealerScore += card.value
+                    }
+                }
+                
+                currentIndex += 1
+                
+                if currentIndex == currentDeck.count {
+                    isDealing = false
+                }
+                
+                if currentIndex >= 3 {
+                    withAnimation {
+                        isPlayerTurn = true
+                    }
+                }
+            }
+        }
+        
+        addCard(currentDeck[0], after: delayUnit * 1)
+        addCard(currentDeck[1], after: delayUnit * 2)
+        addCard(currentDeck[2], after: delayUnit * 3)
+        addCard(currentDeck[3], after: delayUnit * 4)
+    }
+    
+    private func addPlayerCard() {
+        withAnimation {
+            playerCards.append(currentDeck[currentIndex])
+            playerScore += currentDeck[currentIndex].value
+        }
+        
+        currentIndex += 1
+    }
+}
 
 extension GameView {
-    func handleDevScenario(_ scenario: DevScenario) {
+    private func handleDevScenario(_ scenario: DevScenario) {
+        guard !isDealing else { return }
+        
         print("🧪 Dev Scenario Triggered: \(scenario.rawValue)")
         
         switch scenario {
         case .initialDeal:
-            let deck = MockDeckManager.deck(for: scenario)
-            currentDeck = deck
-            print("👉 Initial Deal Deck:", deck)
-            
-        case .endPlayerWins:
-            print("🏁 Would show: Player Wins")
-            
-        case .endDealerWins:
-            print("🏁 Would show: Dealer Wins")
-            
-        case .endPush:
-            print("🏁 Would show: Push (tie)")
-            
-        case .endSplitWin:
-            print("🏁 Would show: Split Win")
-            
+            currentDeck = MockDeckManager.deck(for: scenario)
+            dealOpeningCards()
+        case .player6Cards:
+            currentDeck = MockDeckManager.deck(for: scenario)
+            dealOpeningCards()
         default:
             print("🧪 Scenario '\(scenario.label)' not wired yet.")
-        }
-    }
-}
-
-struct MockDeckManager {
-    static func deck(for scenario: DevScenario) -> [Card] {
-        switch scenario {
-        case .initialDeal:
-            return [
-                Card(suit: "Spades", rank: "Ace", value: 11),     // Player 1
-                Card(suit: "Hearts", rank: "King", value: 10),    // Dealer 1
-                Card(suit: "Clubs", rank: "Six", value: 6),       // Player 2
-                Card(suit: "Diamonds", rank: "Three", value: 3)   // Dealer 2
-            ]
-        case .playerBlackjack:
-            return [
-                Card(suit: "Spades", rank: "Ace", value: 11),     // Player 1
-                Card(suit: "Hearts", rank: "Nine", value: 9),     // Dealer 1
-                Card(suit: "Clubs", rank: "Queen", value: 10),    // Player 2
-                Card(suit: "Diamonds", rank: "Four", value: 4)    // Dealer 2
-            ]
-        // Add more scenarios here as needed
-        default:
-            return []
         }
     }
 }
