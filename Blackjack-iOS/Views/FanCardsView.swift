@@ -2,52 +2,54 @@ import SwiftUI
 import Observation
 
 struct FanCardsView: View {
-    @State var gameViewManager: GameViewManager
 
+    
     let cards: [Card]
     let isDealerCard: Bool
     let isGameOver: Bool
     let dealerScore: Int
     let playerScore: Int
-
+    let isPlayerTurn = true
+    
     private let scoreHeaderHeight: CGFloat = 30
     private let cardHeight: CGFloat = 200
     private let cardAspect: CGFloat = 500.0 / 726.0
     private var cardWidth: CGFloat { cardHeight * cardAspect }
     private var overlapAmount: CGFloat { cardWidth * 0.4 }
-
+    
     var body: some View {
         VStack(spacing: 0) {
             scoreHeaderView
             GeometryReader { geo in
                 let centerX = geo.size.width / 2
                 let centerY = geo.size.height / 2
-
+                
                 ZStack {
                     ForEach(cards.indices, id: \.self) { index in
                         CardView(card: cards[index], isFaceUp: isCardFaceUp(at: index))
                             .frame(height: cardHeight)
                             .position(
                                 x: isGameOver
-                                    ? centerX
-                                    : cardXPosition(at: index,
-                                                    centerX: centerX,
-                                                    overlapAmount: overlapAmount),
+                                ? centerX
+                                : cardXPosition(at: index,
+                                                centerX: centerX,
+                                                overlapAmount: overlapAmount),
                                 y: centerY
                             )
                             .zIndex(Double(index))
                             .transition(.move(edge: .trailing).combined(with: .opacity))
                     }
                 }
-                .border(.blue, width: 2) // Debug: show GeometryReader area
+                .animation(.default, value: cards.count)
+               // .border(.blue, width: 2) // Debug: show GeometryReader area
             }
             .frame(height: cardHeight)
         }
         .frame(maxWidth: .infinity, alignment: .center)
         .frame(height: scoreHeaderHeight * 2 + cardHeight)
-        .border(.yellow, width: 3) // outer container debug
+        //.border(.yellow, width: 3) // outer container debug
     }
-
+    
     private var scoreHeaderView: some View {
         VStack(spacing: 0) {
             Text(isDealerCard ? "Dealer" : "Player")
@@ -57,7 +59,7 @@ struct FanCardsView: View {
                 .frame(height: scoreHeaderHeight)
         }
     }
-
+    
     /// Calculates the horizontal x-position for each card based on its index
     private func cardXPosition(
         at index: Int,
@@ -68,7 +70,7 @@ struct FanCardsView: View {
         let overlapTighteningFactor: CGFloat = 0.05
         let maxOverlapFactor: CGFloat = 0.8
         let halfOverlapMultiplier: CGFloat = 0.5
-
+        
         // Determine base spacing between card centers:
         // - 1 card: centered (no spacing)
         // - 2 cards: standard overlap spacing
@@ -85,7 +87,7 @@ struct FanCardsView: View {
                 return overlapAmount * maxOverlapFactor
             }
         }()
-
+        
         // Dealer’s initial flat deal (first two cards side-by-side):
         // Anchor at half-fan points, then remove overlap so they sit side-by-side.
         if isDealerCard && index < 2 {
@@ -93,17 +95,17 @@ struct FanCardsView: View {
             let xPos = centerX + (index == 0 ? -halfGap : halfGap)
             return index == 0 ? xPos - overlapAmount : xPos + overlapAmount
         }
-
+        
         // Standard fan layout for all other cases:
         switch totalCount {
         case 1:
             // Single card: shift left by half overlap so center aligns
             return centerX - overlapAmount * halfOverlapMultiplier
-
+            
         case 2:
             // Two-card fan (e.g., player’s first two cards)
             return centerX + interCardSpacing * (index == 0 ? -halfOverlapMultiplier : halfOverlapMultiplier)
-
+            
         default: // totalCount >= 3
             // Center the fan by calculating the total width and offsetting
             let totalWidth = interCardSpacing * CGFloat(totalCount - 1)
@@ -111,7 +113,7 @@ struct FanCardsView: View {
             return startX + CGFloat(index) * interCardSpacing
         }
     }
-
+    
     /// Determines if a card should be face-up; dealer’s second card remains face-down
     private func isCardFaceUp(at index: Int) -> Bool {
         !(isDealerCard && index == 1)

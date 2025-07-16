@@ -1,27 +1,28 @@
-//
-//  DevMenuButton.swift
-//  Blackjack-iOS
-//
-//  Created by Jonni Akesson on 2025-06-18.
-//
-
 import SwiftUI
 
 struct DevMenuButton: View {
     let title: String
+    var isSelected: Bool = false
     var color: Color = .blue
     var action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
-            Text(title)
-                .font(.caption2)
-                .bold()
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(color)
-                .cornerRadius(8)
+            HStack {
+                Text(title)
+                    .font(.subheadline)
+                    .bold()
+                    .foregroundColor(.white)
+                Spacer()
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.white)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(isSelected ? .green : color)
+            .cornerRadius(8)
         }
         .contentShape(Rectangle())
     }

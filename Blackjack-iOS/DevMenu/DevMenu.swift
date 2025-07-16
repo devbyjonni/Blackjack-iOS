@@ -10,6 +10,7 @@ import SwiftUI
 struct DevMenu: View {
     @Binding var isVisible: Bool
     @Binding var animationSpeed: AnimationSpeed
+    @Binding var selectedScenario: DevScenario
     
     var body: some View {
         VStack(alignment: .trailing, spacing: 8) {
@@ -26,8 +27,12 @@ struct DevMenu: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 8) {
                             ForEach(DevScenario.allCases) { scenario in
-                                DevMenuButton(title: scenario.label) {
+                                DevMenuButton(
+                                    title: scenario.label,
+                                    isSelected: scenario == selectedScenario // pass this in!
+                                ) {
                                     NotificationCenter.default.post(name: .devSelectedScenario, object: scenario)
+                                    selectedScenario = scenario // update selection!
                                 }
                             }
                         }
@@ -58,7 +63,7 @@ struct DevMenu: View {
         }
         .padding(.trailing, 16)
         .padding(.bottom, 20)
-        .frame(width: 220, alignment: .trailing)
+        .frame(width: 280, alignment: .trailing)
     }
 }
 
