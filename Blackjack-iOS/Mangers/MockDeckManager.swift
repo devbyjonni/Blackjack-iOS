@@ -17,4 +17,15 @@ struct MockDeckManager {
             Card(suit: .clubs, rank: .nine),      // Dealer 2: 9♣ (any)
         ]
     }
+    
+    static func forceSplitScenarioleftHandBlackjack() -> [Card] {
+        return [
+            Card(suit: .spades, rank: .ace),      // Player 1: A♠
+            Card(suit: .hearts, rank: .king),     // Dealer 1: K♥
+            Card(suit: .diamonds, rank: .ace),    // Player 2: A♦
+            Card(suit: .clubs, rank: .five),      // Dealer 2: 5♣
+            Card(suit: .spades, rank: .king),     // Left hand: K♠ (Blackjack!)
+            Card(suit: .diamonds, rank: .three),  // Right hand: 3♦
+        ]
+    }
 }
