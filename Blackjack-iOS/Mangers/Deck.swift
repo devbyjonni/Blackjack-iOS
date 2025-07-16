@@ -1,3 +1,6 @@
+import Foundation
+
+
 final class Deck {
     private(set) var cards: [Card]
     private let numberOfDecks: Int

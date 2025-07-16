@@ -1,42 +1,27 @@
 import SwiftUI
 
 struct GameView: View {
-    private enum Outcome {
-        case playerWins, dealerWins, push, playerBlackjack
-    }
-    private enum GamePhase {
-        case idle
-        case dealing
-        case playerTurn
-        case dealerTurn
-        case gameOver
-    }
-    
-    @State private var deck = Deck()
-    @State private var animationSpeed: AnimationSpeed = .medium
-    @State private var currentScenario: DevScenario = .noForce
-    @State private var showDevMenu = false
-    @State private var outcome: Outcome? = nil
-    
-    @State private var gamePhase: GamePhase = .idle
-    @State private var dealerScore = 0
-    @State private var playerScore = 0
-    
-    @State private var dealerCards: [Card] = []
-    @State private var playerCards: [Card] = []
-    @State private var playerSplitCards: [Card] = []
-    
-    @State private var canSplit = false
-    @State private var didSplit = false
-    @State private var showSplitPrompt = false
-    @State private var activeHand: Int = 0
-    
-    @State private var leftHandBusted: Bool = false
-    @State private var rightHandBusted: Bool = false
-    
-    var leftHandScore: Int { playerCards.reduce(0) { $0 + $1.pipValue } }
-    var rightHandScore: Int { playerSplitCards.reduce(0) { $0 + $1.pipValue } }
-    
+    @State var animationSpeed: AnimationSpeed = .medium
+    @State var currentScenario: DevScenario = .noForce
+    @State var showDevMenu = false
+    @State var deck = Deck()
+    @State var outcome: Outcome? = nil
+    @State var gamePhase: GamePhase = .idle
+    @State var dealerCards: [Card] = []
+    @State var playerCards: [Card] = []
+    @State var playerSplitCards: [Card] = []
+    @State var canSplit = false
+    @State var didSplit = false
+    @State var showSplitPrompt = false
+    @State var activeHand: Int = 0
+    @State var leftHandBusted: Bool = false
+    @State var rightHandBusted: Bool = false
+
+    var leftHandScore: Int { calculateHandScore(playerCards) }
+    var rightHandScore: Int { calculateHandScore(playerSplitCards) }
+    var dealerScore: Int { calculateHandScore(dealerCards) }
+    var playerScore: Int { calculateHandScore(playerCards) }
+
     var body: some View {
         ZStack {
             VStack {
@@ -59,7 +44,7 @@ struct GameView: View {
                             isDealerCard: false,
                             isGameOver: gamePhase == .gameOver,
                             dealerScore: dealerScore,
-                            playerScore: leftHandScore, // ← Use computed left score!
+                            playerScore: leftHandScore,
                             highlighted: gamePhase == .playerTurn && activeHand == 0
                         )
                         // Right (split) hand, highlight if player's turn and this hand is active
@@ -68,7 +53,7 @@ struct GameView: View {
                             isDealerCard: false,
                             isGameOver: gamePhase == .gameOver,
                             dealerScore: dealerScore,
-                            playerScore: rightHandScore, // ← Use computed right score!
+                            playerScore: rightHandScore,
                             highlighted: gamePhase == .playerTurn && activeHand == 1
                         )
                     }
@@ -110,93 +95,30 @@ struct GameView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color("Custom_Green"))
             .allowsHitTesting(!showSplitPrompt)
-            
-            // --------- OUTCOME MODAL ---------
-            if let result = outcome {
-                ZStack {
-                    Color.black.opacity(0.8)
-                        .cornerRadius(12)
-                        .shadow(radius: 10)
-                    VStack(spacing: 12) {
-                        switch result {
-                        case .playerWins:
-                            Text("Dealer Bust!")
-                                .font(.title3)
-                            Text("You Win!")
-                                .font(.title)
-                                .italic()
-                                .foregroundColor(.yellow)
-                        case .dealerWins:
-                            Text("Dealer Wins")
-                                .font(.title3)
-                            Text("Better luck next time")
-                                .font(.title)
-                                .italic()
-                                .foregroundColor(.yellow)
-                        case .push:
-                            Text("Push")
-                                .font(.title3)
-                            Text("It's a tie")
-                                .font(.title)
-                                .italic()
-                                .foregroundColor(.yellow)
-                        case .playerBlackjack:
-                            Text("Blackjack!")
-                                .font(.title)
-                                .foregroundColor(.yellow)
-                            Text("You win with a natural 21.")
-                                .font(.title3)
-                                .italic()
-                        }
-                    }
-                    .foregroundColor(.white)
-                    .fontWeight(.heavy)
+            .overlay(alignment: .center) {
+                if let result = outcome {
+                    OutcomeModal(outcome: result)
                 }
-                .frame(width: 400, height: 200)
-                .transition(.scale)
             }
         }
-        // --------- SPLIT PROMPT MODAL ---------
         .overlay(alignment: .bottom) {
             if showSplitPrompt {
-                VStack(spacing: 20) {
-                    Text("Do you want to split?")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                    HStack(spacing: 30) {
-                        Button("Yes") {
-                            withAnimation {
-                                showSplitPrompt = false
-                                handleSplitTapped()
-                            }
+                SplitPrompt(
+                    onYes: {
+                        withAnimation {
+                            showSplitPrompt = false
+                            handleSplitTapped()
                         }
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 8)
-                        .background(Color.green)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
-                        Button("No") {
-                            withAnimation {
-                                showSplitPrompt = false
-                            }
-                            canSplit = false
+                    },
+                    onNo: {
+                        withAnimation {
+                            showSplitPrompt = false
                         }
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 8)
-                        .background(Color.red)
-                        .foregroundColor(.white)
-                        .cornerRadius(10)
+                        canSplit = false
                     }
-                }
-                .frame(width: 600)
-                .padding()
-                .background(Color.black.opacity(0.9))
-                .cornerRadius(14)
-                .shadow(radius: 12)
-                .transition(.scale)
+                )
             }
         }
-        .animation(.default, value: canSplit)
         .animation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0), value: outcome)
         .overlay(alignment: .bottomTrailing) {
             DevMenu(
@@ -216,6 +138,8 @@ struct GameView: View {
                     deck = Deck(mockCards: MockDeckManager.forceSplitScenarioleftHandBlackjack())
                 case .forcePlayerBlackjack:
                     deck = Deck(mockCards: MockDeckManager.forcePlayerBlackjack())
+                case .forceAceScenarios:
+                    deck = Deck(mockCards: MockDeckManager.forceAceScenarios())
                 }
                 resetGame()
                 currentScenario = scenario
@@ -231,7 +155,6 @@ struct GameView: View {
         resetGame()
         gamePhase = .dealing
         let delayUnit = animationSpeed.delay
-        let faceDownCardIndex = 3
         
         DispatchQueue.main.asyncAfter(deadline: .now() + delayUnit) {
             for index in 0...3 {
@@ -241,7 +164,6 @@ struct GameView: View {
                         if index % 2 == 0 {
                             playerCards.append(card)
                             DispatchQueue.main.asyncAfter(deadline: .now() + cardDelay) {
-                                playerScore += card.pipValue
                                 // --- SPLIT CHECK: after both player cards are present ---
                                 if playerCards.count == 2 {
                                     if playerCards[0].rank == playerCards[1].rank {
@@ -266,11 +188,7 @@ struct GameView: View {
                             }
                         } else {
                             dealerCards.append(card)
-                            DispatchQueue.main.asyncAfter(deadline: .now() + cardDelay) {
-                                if index < faceDownCardIndex {
-                                    dealerScore += card.pipValue
-                                }
-                            }
+                            // No need to handle scores, will always use calculated
                         }
                     }
                     // Only enable player input after the last card dealt
@@ -286,80 +204,6 @@ struct GameView: View {
         }
     }
     
-    private func isPlayerBlackjack(_ cards: [Card]) -> Bool {
-        guard cards.count == 2 else { return false }
-        let ranks = [cards[0].rank, cards[1].rank]
-        let tenRanks: [Rank] = [.ten, .jack, .queen, .king]
-        return (ranks.contains(.ace) && ranks.contains(where: { tenRanks.contains($0) }))
-    }
-    
-    private func handleSplitTapped() {
-        guard playerCards.count == 2 else { return }
-        // 1. Move second card to split hand
-        let splitCard = playerCards.removeLast()
-        playerSplitCards = [splitCard]
-        didSplit = true
-        canSplit = false
-        
-        // 2. Immediately deal one card to each hand (with animation)
-        let delayUnit = animationSpeed.delay
-        
-        // Deal to left/main hand
-        DispatchQueue.main.asyncAfter(deadline: .now() + delayUnit) {
-            if let card = deck.dealOne() {
-                playerCards.append(card)
-            }
-            // Deal to split hand (after another delay)
-            DispatchQueue.main.asyncAfter(deadline: .now() + delayUnit) {
-                if let card = deck.dealOne() {
-                    playerSplitCards.append(card)
-                }
-                // 3. Set to start with first hand (activeHand = 0)
-                activeHand = 0
-            }
-        }
-    }
-    
-    private func resetGame() {
-        dealerCards.removeAll()
-        playerCards.removeAll()
-        playerSplitCards.removeAll()
-        dealerScore = 0
-        playerScore = 0
-        canSplit = false
-        didSplit = false
-        showSplitPrompt = false
-        outcome = nil
-        leftHandBusted = false
-        rightHandBusted = false
-        activeHand = 0
-        gamePhase = .idle
-        deck.reset()
-    }
-    
-    private func playerStands() {
-        guard gamePhase == .playerTurn else { return }
-        if didSplit && activeHand == 0 {
-            activeHand = 1 // Now play the split hand
-            return
-        }
-        withAnimation {
-            gamePhase = .dealerTurn
-        }
-        func drawNextCard(after delay: TimeInterval) {
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                if dealerScore < 17, let card = deck.dealOne() {
-                    dealerCards.append(card)
-                    dealerScore += card.pipValue
-                    drawNextCard(after: animationSpeed.delay)
-                } else {
-                    checkForOutcome()
-                }
-            }
-        }
-        drawNextCard(after: animationSpeed.delay)
-    }
-    
     private func addPlayerCard() {
         guard gamePhase == .playerTurn else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + animationSpeed.delay) {
@@ -368,12 +212,10 @@ struct GameView: View {
                     if activeHand == 0 {
                         playerCards.append(card)
                         let cards = playerCards
-                        let score = cards.reduce(0) { $0 + $1.pipValue }
+                        let score = calculateHandScore(cards)
                         if cards.count == 2, isPlayerBlackjack(cards) {
-                            // Show split-hand blackjack outcome
                             outcome = .playerBlackjack
                             withAnimation { gamePhase = .gameOver }
-                            // Move to next hand after delay
                             DispatchQueue.main.asyncAfter(deadline: .now() + animationSpeed.delay + 1.0) {
                                 outcome = nil
                                 withAnimation { gamePhase = .playerTurn }
@@ -392,7 +234,7 @@ struct GameView: View {
                     } else {
                         playerSplitCards.append(card)
                         let cards = playerSplitCards
-                        let score = cards.reduce(0) { $0 + $1.pipValue }
+                        let score = calculateHandScore(cards)
                         if cards.count == 2, isPlayerBlackjack(cards) {
                             outcome = .playerBlackjack
                             withAnimation { gamePhase = .gameOver }
@@ -426,55 +268,33 @@ struct GameView: View {
                 } else {
                     // Regular single-hand play
                     playerCards.append(card)
-                    playerScore += card.pipValue
-                    if playerScore > 21 {
+                    let score = calculateHandScore(playerCards)
+                    if score > 21 {
                         checkForOutcome()
-                    } else if playerScore == 21 {
+                    } else if score == 21 {
                         playerStands()
                     }
                 }
             }
         }
     }
-    
-    
-    private func dealerDrawLoop() {
-        func drawNextCard(after delay: TimeInterval) {
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                if dealerScore < 17, let card = deck.dealOne() {
-                    dealerCards.append(card)
-                    dealerScore += card.pipValue
-                    drawNextCard(after: animationSpeed.delay)
-                } else {
-                    checkForOutcome()
-                }
-            }
-        }
-        drawNextCard(after: animationSpeed.delay)
-    }
-    
-    private func checkForOutcome() {
-        let outcomeDelay = animationSpeed.delay + 0.5
-        DispatchQueue.main.asyncAfter(deadline: .now() + outcomeDelay) {
-            if playerScore > 21 {
-                outcome = .dealerWins
-            } else if dealerScore > 21 {
-                outcome = .playerWins
-            } else if playerScore > dealerScore {
-                outcome = .playerWins
-            } else if dealerScore > playerScore {
-                outcome = .dealerWins
+
+    // Keep your ace score function!
+    func calculateHandScore(_ cards: [Card]) -> Int {
+        var total = 0
+        var aceCount = 0
+        for card in cards {
+            if card.rank == .ace {
+                aceCount += 1
+                total += 11
             } else {
-                outcome = .push
-            }
-            withAnimation {
-                gamePhase = .gameOver
-            }
-            let resetDelay = animationSpeed.delay + 3.0
-            DispatchQueue.main.asyncAfter(deadline: .now() + resetDelay) {
-                outcome = nil
-                resetGame()
+                total += card.pipValue
             }
         }
+        while total > 21 && aceCount > 0 {
+            total -= 10
+            aceCount -= 1
+        }
+        return total
     }
 }
