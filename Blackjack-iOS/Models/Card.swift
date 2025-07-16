@@ -1,8 +1,3 @@
-//  Card.swift
-//  Blackjack-iOS
-//
-//  Updated by ChatGPT on 2025-07-14.
-
 import Foundation
 
 /// The four suits in a standard deck.

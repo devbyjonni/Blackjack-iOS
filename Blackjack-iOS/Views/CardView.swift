@@ -1,11 +1,6 @@
-//  CardView.swift
-//  Blackjack-iOS
-//
-//  Updated by ChatGPT on 2025-07-14.
-
 import SwiftUI
 
-/// A SwiftUI view that displays a playing card, either face-up or face-down, with a flip animation.
+
 struct CardView: View {
     // MARK: - Properties
     let card: Card

@@ -1,3 +1,6 @@
+import Foundation
+
+
 struct MockDeckManager {
     static func forceSplitScenario() -> [Card] {
         return [
@@ -26,6 +29,16 @@ struct MockDeckManager {
             Card(suit: .clubs, rank: .five),      // Dealer 2: 5♣
             Card(suit: .spades, rank: .king),     // Left hand: K♠ (Blackjack!)
             Card(suit: .diamonds, rank: .three),  // Right hand: 3♦
+        ]
+    }
+    
+    static func forceAceScenarios() -> [Card] {
+        return [
+            Card(suit: .spades, rank: .ace),      // Player 1: A♠
+            Card(suit: .hearts, rank: .eight),    // Dealer 1: 8♥
+            Card(suit: .clubs, rank: .eight),     // Player 2: 8♣
+            Card(suit: .diamonds, rank: .five),   // Dealer 2: 5♦
+            Card(suit: .spades, rank: .five),     // Player draws 5♠ (forces ace as 1)
         ]
     }
 }
