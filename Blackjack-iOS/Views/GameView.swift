@@ -1,70 +1,159 @@
 import SwiftUI
 
 struct GameView: View {
+    // Animation speed for card dealing and other UI elements (slow, medium, fast, etc.)
     @State var animationSpeed: AnimationSpeed = .medium
+
+    // The current developer test scenario (for mock decks and forced states)
     @State var currentScenario: DevScenario = .noForce
+
+    // Controls visibility of the developer menu for debugging/testing
     @State var showDevMenu = false
+
+    // The active deck being used for the game (real or mock cards)
     @State var deck = Deck()
+
+    // The outcome of the current game round (win/loss/push/blackjack, etc.)
     @State var outcome: Outcome? = nil
+
+    // The current phase of the game (idle, dealing, playerTurn, dealerTurn, gameOver)
     @State var gamePhase: GamePhase = .idle
+
+    // The dealer's current hand of cards
     @State var dealerCards: [Card] = []
+
+    // The player's primary hand of cards
     @State var playerCards: [Card] = []
+
+    // The player's split hand (if a split has occurred), otherwise empty
     @State var playerSplitCards: [Card] = []
+
+    // True if the player can currently split their hand
     @State var canSplit = false
+
+    // True if the player has performed a split in this round
     @State var didSplit = false
+
+    // Controls visibility of the split prompt (the dialog asking to split)
     @State var showSplitPrompt = false
+
+    // Tracks which hand is currently active for the player (0 = left, 1 = right)
     @State var activeHand: Int = 0
+
+    // Flags for busted hands when playing after a split
     @State var leftHandBusted: Bool = false
     @State var rightHandBusted: Bool = false
 
+    // Shows the "dealer is peeking" animation/indicator (e.g., when checking for blackjack)
+    @State var isDealerPeeking = false
+    
+    /// The current score for the left (main) player hand.
+    /// Calculated every time the playerCards array changes.
+    /// Handles Aces as 1 or 11 automatically.
     var leftHandScore: Int { calculateHandScore(playerCards) }
-    var rightHandScore: Int { calculateHandScore(playerSplitCards) }
-    var dealerScore: Int { calculateHandScore(dealerCards) }
-    var playerScore: Int { calculateHandScore(playerCards) }
 
+    /// The current score for the right (split) player hand.
+    /// Updated dynamically from the playerSplitCards array.
+    var rightHandScore: Int { calculateHandScore(playerSplitCards) }
+
+    /// The current score for the dealer’s visible hand.
+    /// Always up-to-date based on dealerCards array.
+    var dealerScore: Int { calculateHandScore(dealerCards) }
+
+    /// The score for the main player hand (alias for leftHandScore).
+    /// Provided for convenience or legacy code compatibility.
+    var playerScore: Int { calculateHandScore(playerCards) }
+    
+    
+    
+    /// Returns the score to show for the dealer in the UI,
+    /// depending on the game phase:
+    /// - If it's the dealer's turn or the game is over, show the *real* dealer score.
+    /// - Otherwise (before the dealer reveals), show only the upcard's pip value (e.g., "A" = 1, "K" = 10).
+    /// - If no cards yet, show 0.
+    var dealerScoreForDisplay: Int {
+        if gamePhase == .dealerTurn || gamePhase == .gameOver {
+            return dealerScore // Reveal the full dealer score.
+        } else if dealerCards.count > 0 {
+            return dealerCards[0].pipValue // Show only the value of the upcard.
+        } else {
+            return 0 // No cards yet.
+        }
+    }
+
+    /// Returns the visible score for the dealer:
+    /// - During the initial deal or when idle, show only the upcard's score.
+    /// - After that, reveal the full dealer score.
+    /// This is useful for syncing what the player should see as the dealer’s visible score.
+    var dealerVisibleScore: Int {
+        // Show only the first card's score while the second card is still face-down
+        if gamePhase == .dealing || gamePhase == .idle {
+            return dealerCards.first.map { calculateHandScore([$0]) } ?? 0
+        }
+        // Otherwise, show the real dealer score (all cards)
+        return dealerScore
+    }
+    
+    
+    
     var body: some View {
         ZStack {
             VStack {
-                // Dealer hand with highlight if dealer turn
+                if isDealerPeeking {
+                    Circle()
+                        .fill(Color.orange)
+                        .frame(width: 44, height: 44)
+                        .overlay(
+                            Text("👁️")
+                                .font(.title)
+                        )
+                        .padding(.bottom, 8)
+                        .transition(.scale)
+                }
+                // Dealer hand (top, only once!)
                 FanCardsView(
                     cards: dealerCards,
                     isDealerCard: true,
                     isGameOver: gamePhase == .gameOver,
-                    dealerScore: dealerScore,
-                    playerScore: playerScore,
+                    dealerScore: dealerVisibleScore, // ← use your computed property for visibility!
+                    playerScore: playerScore, // This is only needed if you display it for some reason
+                    dealerRevealed: gamePhase == .dealerTurn || gamePhase == .gameOver,
                     highlighted: gamePhase == .dealerTurn
                 )
-                
+
                 Text("Logo View Goes Here")
+
                 if didSplit {
                     HStack {
-                        // Left (main) hand, highlight if player's turn and this hand is active
+                        // Left hand (main)
                         FanCardsView(
                             cards: playerCards,
                             isDealerCard: false,
                             isGameOver: gamePhase == .gameOver,
-                            dealerScore: dealerScore,
+                            dealerScore: dealerScore, // Not used, but fine to pass
                             playerScore: leftHandScore,
+                            dealerRevealed: true,
                             highlighted: gamePhase == .playerTurn && activeHand == 0
                         )
-                        // Right (split) hand, highlight if player's turn and this hand is active
+                        // Right hand (split)
                         FanCardsView(
                             cards: playerSplitCards,
                             isDealerCard: false,
                             isGameOver: gamePhase == .gameOver,
                             dealerScore: dealerScore,
                             playerScore: rightHandScore,
+                            dealerRevealed: true,
                             highlighted: gamePhase == .playerTurn && activeHand == 1
                         )
                     }
                 } else {
-                    // Single player hand, highlight if player's turn
                     FanCardsView(
                         cards: playerCards,
                         isDealerCard: false,
                         isGameOver: gamePhase == .gameOver,
                         dealerScore: dealerScore,
-                        playerScore: playerScore,
+                        playerScore: playerScore, // Not leftHandScore!
+                        dealerRevealed: true,
                         highlighted: gamePhase == .playerTurn
                     )
                 }
@@ -135,11 +224,15 @@ struct GameView: View {
                 case .forceSplitScenario:
                     deck = Deck(mockCards: MockDeckManager.forceSplitScenario())
                 case .forceSplitScenarioLeftHandBlackjack:
-                    deck = Deck(mockCards: MockDeckManager.forceSplitScenarioleftHandBlackjack())
+                    deck = Deck(mockCards: MockDeckManager.forceSplitScenarioLeftHandBlackjack())
                 case .forcePlayerBlackjack:
                     deck = Deck(mockCards: MockDeckManager.forcePlayerBlackjack())
-                case .forceAceScenarios:
-                    deck = Deck(mockCards: MockDeckManager.forceAceScenarios())
+                case .forceAceScenariosDealerBJ:
+                    deck = Deck(mockCards: MockDeckManager.forceAceScenariosDealerBJ())
+                case .forceAceScenariosBothBJ:
+                    deck = Deck(mockCards: MockDeckManager.forceAceScenariosBothBJ())
+                case .forceAceScenariosNeitherBJ:
+                    deck = Deck(mockCards: MockDeckManager.forceAceScenariosNeitherBJ())
                 }
                 resetGame()
                 currentScenario = scenario
@@ -192,10 +285,13 @@ struct GameView: View {
                         }
                     }
                     // Only enable player input after the last card dealt
+                    // After all four cards have been dealt:
                     if index == 3 {
                         DispatchQueue.main.asyncAfter(deadline: .now() + delayUnit) {
-                            withAnimation {
-                                gamePhase = .playerTurn
+                            if dealerShouldPeek() {
+                                handleDealerPeek()  // Shows 👁️ for 2s, THEN continues
+                            } else {
+                                withAnimation { gamePhase = .playerTurn }
                             }
                         }
                     }
@@ -278,23 +374,28 @@ struct GameView: View {
             }
         }
     }
-
-    // Keep your ace score function!
-    func calculateHandScore(_ cards: [Card]) -> Int {
-        var total = 0
-        var aceCount = 0
-        for card in cards {
-            if card.rank == .ace {
-                aceCount += 1
-                total += 11
+    
+    func handleDealerPeek() {
+        isDealerPeeking = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            isDealerPeeking = false
+            if isDealerBlackjack() {
+                if isPlayerBlackjack(playerCards) {
+                    outcome = .push
+                } else {
+                    outcome = .dealerWins
+                }
+                withAnimation { gamePhase = .gameOver }
+                
+                // 🟢 Add delayed reset here!
+                let resetDelay = animationSpeed.delay + 3.0
+                DispatchQueue.main.asyncAfter(deadline: .now() + resetDelay) {
+                    outcome = nil
+                    resetGame()
+                }
             } else {
-                total += card.pipValue
+                withAnimation { gamePhase = .playerTurn }
             }
         }
-        while total > 21 && aceCount > 0 {
-            total -= 10
-            aceCount -= 1
-        }
-        return total
     }
 }

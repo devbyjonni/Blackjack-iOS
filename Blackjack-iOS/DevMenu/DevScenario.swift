@@ -3,7 +3,9 @@ enum DevScenario: String, CaseIterable, Identifiable {
     case forceSplitScenario
     case forceSplitScenarioLeftHandBlackjack
     case forcePlayerBlackjack
-    case forceAceScenarios
+    case forceAceScenariosDealerBJ
+    case forceAceScenariosBothBJ
+    case forceAceScenariosNeitherBJ
     
     var id: String { rawValue }
 }
@@ -19,8 +21,12 @@ extension DevScenario {
             return "Split & Left BJ"
         case .forcePlayerBlackjack:
             return "Force Player Blackjack"
-        case .forceAceScenarios:
-            return "Force Ace Scenarios"
+        case .forceAceScenariosDealerBJ:
+            return "Force Ace: Dealer Blackjack"
+        case .forceAceScenariosBothBJ:
+            return "Force Ace: Both Blackjack"
+        case .forceAceScenariosNeitherBJ:
+            return "Force Ace: Neither Blackjack"
         }
     }
 }
