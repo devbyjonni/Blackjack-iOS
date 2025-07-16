@@ -1,15 +1,13 @@
 import SwiftUI
-import Observation
 
 struct FanCardsView: View {
-
-    
     let cards: [Card]
     let isDealerCard: Bool
     let isGameOver: Bool
     let dealerScore: Int
     let playerScore: Int
     let isPlayerTurn = true
+    let highlighted: Bool
     
     private let scoreHeaderHeight: CGFloat = 30
     private let cardHeight: CGFloat = 200
@@ -25,6 +23,12 @@ struct FanCardsView: View {
                 let centerY = geo.size.height / 2
                 
                 ZStack {
+                    // 🔆 Only shows the glow if highlighted is true
+                    if highlighted {
+                        Spotlight(color: .yellow)
+                            .position(x: centerX, y: centerY)
+                           // .zIndex(-1)
+                    }
                     ForEach(cards.indices, id: \.self) { index in
                         CardView(card: cards[index], isFaceUp: isCardFaceUp(at: index))
                             .frame(height: cardHeight)
@@ -41,7 +45,7 @@ struct FanCardsView: View {
                     }
                 }
                 .animation(.default, value: cards.count)
-               // .border(.blue, width: 2) // Debug: show GeometryReader area
+                // .border(.blue, width: 2) // Debug: show GeometryReader area
             }
             .frame(height: cardHeight)
         }
@@ -120,3 +124,16 @@ struct FanCardsView: View {
     }
 }
 
+struct Spotlight: View {
+    var color: Color = .yellow
+    var lineWidth: CGFloat = 6
+    
+    var body: some View {
+        Circle()
+            .strokeBorder(color, lineWidth: lineWidth)
+            .frame(width: 280, height: 280)
+            .opacity(0.9)
+            .shadow(color: color.opacity(0.4), radius: 8)
+            .allowsHitTesting(false)
+    }
+}
